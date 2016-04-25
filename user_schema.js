@@ -16,7 +16,7 @@ var userSchema = mongoose.Schema({
         long: {type:Number,"default":0}
     },
     feeds :[{feedId: String,date: Date}]
-    }
+    
 });
 
 

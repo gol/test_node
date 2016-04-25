@@ -118,7 +118,7 @@
                                         destination : req.file.destination,
                                         fileName : req.file.filename,
                                         path: req.file.path
-                                    }
+                                    },
                                     createdOn: Date.now(),
                                     like : 0,
                                     location : {
@@ -158,10 +158,7 @@ app.get('/', function(req, res) {
 
     });
 
-app.post('/upload/test',function(req,res){
-    console.log(req)
-    
-})
+
 app.get('/user', function(req, res) {
         res.sendfile('user_index.html'); // load the single view file (angular will handle the page changes on the front-end)
     });

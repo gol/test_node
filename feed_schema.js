@@ -7,11 +7,11 @@ var feedSchema = mongoose.Schema({
 	userName: String,
 	body:String,
 	files:{
-		count : {Number,"default":0}
+		count : {Number,"default":0},
 		destination : String,
 		fileName : String,
 		path: String
-	}
+	},
 	createdon: Date,
 	updatedon: Date,
 	likes: Number,
