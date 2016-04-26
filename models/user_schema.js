@@ -15,7 +15,8 @@ var userSchema = mongoose.Schema({
         lat: {type:Number,"default":0},
         long: {type:Number,"default":0}
     },
-    feeds :[{feedId: String,date: Date}]
+    feeds :[{feedId: String,date: Date,type : String}]
+    // type can be like,post,comment,share
     
 });
 
