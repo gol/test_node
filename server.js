@@ -28,10 +28,11 @@
     // given a checke in user,location,text,likes,timestamp
     // location_id : feed_id mapping
     // user_id : feed_id mapping
-    // feed _v1:
-    // add photos, likes api 
+    // feed _v1 :-
+    // add photos, likes,share,comment[text only],update,delete api 
+    // fedd _v2 :-
     // add metatags support
-    // 
+    // display form database
 
 
 
@@ -64,6 +65,8 @@
     
     app.post('/feed/post',function(req,res,next){
 
+        var createDate = Date.now() ;
+
         console.log(' Image enablled post ') ;
         upload(req,res,function(err){
             if (err) throw err;
@@ -71,7 +74,6 @@
                 console.log("Image uploaded successfully")
                 console.log(req.body);
                 console.log(req.file) ;
-                //res.json(req.file) ;
                 var user_name = req.body.uname;
                 var user_id  ;
                 console.log(' User :',user_name, 'wants to post');
@@ -108,24 +110,43 @@
                                     locationLong = place.restaurant.location.long ;
                                     console.log("User is vibrating from :",locationName) ;
                                     }
+                                // check if we have photo attcahed or not
+                                    var fileCount ;
+                                    var fileDest  ;
+                                    var fileName  ;
+                                    var filePath  ;
+                                if(req.file){
+                                    fileCount = 1 ;
+                                    fileDest = req.file.destination ;
+                                    fileName = req.file.filename ;
+                                    filePath =  req.file.path ;
+                                }
+                                else{
+                                    fileCount = 0;
+                                    fileDest = "";
+                                    fileName = "";
+                                    filePath = "";
+
+                                }
+
                            
                                  var newFeed = new feed({
                                     userId : user_id,
                                     username : user_name,
                                     body: req.body.feedText,
                                     files:{
-                                        count : 1,
-                                        destination : req.file.destination,
-                                        fileName : req.file.filename,
-                                        path: req.file.path
+                                        count : fileCount,
+                                        destination : fileDest,
+                                        fileName : fileName,
+                                        path:  filePath
                                     },
-                                    createdOn: Date.now(),
-                                    like : 0,
+                                    createdOn: createDate,
                                     location : {
                                         name : locationName,
                                         lat :  locationLat,
                                         long : locationLong
-                                           }     
+                                           } ,
+
                                 });
 
                             newFeed.save(function(err){
@@ -133,24 +154,141 @@
                                 //direct him to feed line    
                                 res.json(newFeed);
                                 // add feed to location map
-                                // addd feed to user map 
+                                place.feeds.push({feedId:newFeed._id,date:createDate});
+                                place.save(function(err){
+                                    if(err) throw err;
+                                    else console.log("Feed-location map done");
+                                });
+                                // add user -feed ap
+                                curr_user.feedActivity.push({feedId:newFeed._id,date:createDate,type:"post"});
+                                curr_user.save(function(err){
+                                    if(err) throw err;
+                                    else console.log("user-feed maping done");
+                                })
+
+                                 
                                 console.log(" feed added to data base successfully") ;
                             });
                              });
 
                             }
                         // fucntion : if user is not checked in at some place 
-
-
                         }//else 1
+            });
+          }
+        });    
+}); 
+
+// delete the post
+app.post('/feed/delete',function(req,res){
+
+  // find the post
+  // delete the post
+  //  remove from the users history
+  //  remove from the place -feed map 
+  var feedId = req.body.feedId ;
+  var userId = req.body.userID ;
+
+
+
+});
+// update the post
+
+
+//like the post
+app.post('/feed/like',function(req,res){
+    // user should be logged in 
+    //  
+    //@input : userid, feedid
+    // chnage in database 
+    var userId = req.body.userId ;
+    var feedId = req.body.feedId;
+    var date = Date.now()
+
+    user.findOne({"_id":ObjectId(userId)},function(err,currUser){
+        if(err) throw err;
+        else if(!currUser) res.json({success:false, message:'GTFO'}); 
+        else{//user has already liked the post
+        feed.findOne({"_id":ObjectId(feedId)},function(err,currFeed){
+            if(err) throw err;
+            else if(!currFeed) { console.log("feed gone");res.json({success:false,message:"feed not available"});}
+            feed.findOne({"_id":currFeed._id,"likes.activity.userID":currUser._id,"likes.activity.type":"like"},function(err,nfeed){
+                if(err) throw err ;
+                else if (nfeed) {
+                    //user ahs laready liked the post
+                    res.josn({success:false,message:"Already liked"});
+                }
+                else{
+                    // adding feed to our db
+                    currFeed = currFeed.likes.count + 1;
+                    currFeed.likes.activity.push({userID:userID,date:date});
+                    currFeed.save(function(err){
+                    if(err) throw err;
+            
+                    currUser.feedActivity.push({feedId:feedId,date:date,type:"like"});
+                    currUser.save(function(err){
+                                    if(err) throw err;
+                        });
+
+                    res.json({success:true, message:'Liked'}); 
+                    });
+                }
 
             });
-                        }
         });
-    
-    
-    
+      }
+    }); 
+
 });
+
+// unlike post
+
+// comment on post
+// @input :- userId : userId of person who is commenting,feedId: _id of post on which the user comment:text
+app.post('/feed/comment',function(req,res){
+
+    
+    var userId = req.body.userId;
+    var feedId = req.body.feedId ;
+    var comment = req.body.comment ;
+    var date = Date.now() ;
+    user.findOne({"_id":ObjectId(userId)},function(err,currUser){
+        if(err) throw err;
+        else if(!currUser){
+            console.log("Warn : Alien tried to invade us ");
+            res.json({success:false,message:'GTFO'});
+        }
+        else{
+            feed.findOne({"_id":ObjectId(feedId)},function(err,currFeed){
+                if(err) throw err;
+                else if (!currFeed){
+                    res.json({success:false,message:' Feed already has been deleted'});
+                }
+                else{
+                    currFeed.comment.push({text:comment,date:date,userId:userId});
+
+                    currFeed.save(function(err){
+                        if(err) throw err;
+                    });
+
+                    currUser.feedActivity.push({feedId:feedId,date:date,type:"comment"});
+                    currUser.save(function(err){
+                        if(err) throw err;
+                    });
+                    res.send({success:true,message:'Commented'})
+                }
+            });
+
+        }
+    });
+});
+
+// delete comment
+
+
+// share
+// show feed
+
 
 
 app.get('/', function(req, res) {

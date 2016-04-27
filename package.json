@@ -3,7 +3,7 @@
   "version"      : "0.0.0",
   "description"  : "Simple todo application.",
   "main"         : "server.js",
-  "author"       : "Scotch",
+  "author"       : "Goel",
   "dependencies" : {
     "body-parser"    : "^1.4.3",
     "bcrypt-nodejs": "0.0.3",
