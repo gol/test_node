@@ -62,20 +62,22 @@
                         fileSize : 20000000 // 20Mb
                     } }).single('profilepic');
 
-    
-    app.post('/feed/post',function(req,res,next){
+    //  @input: user_id, location_lat,location_long
+app.post('/feed/post',function(err,currUser){
 
-        var createDate = Date.now() ;
 
-        console.log(' Image enablled post ') ;
-        upload(req,res,function(err){
+var createDate = Date.now() ;
+upload(req,res,function(err){
             if (err) throw err;
             else {
                 console.log("Image uploaded successfully")
                 console.log(req.body);
                 console.log(req.file) ;
                 var user_name = req.body.uname;
+
                 var user_id  ;
+
+                var feedId = req.body.feedId;
                 console.log(' User :',user_name, 'wants to post');
 
                 user.findOne({name:user_name},function(err,curr_user){
@@ -89,6 +91,7 @@
                         res.json({success:false, message:'GTFO'});
 
                     }
+
                     else { //else 1
                         console.log(" Adding feed to  db") ;
                         var user_id = curr_user._id ;
@@ -102,14 +105,23 @@
                             placeId = curr_user.checkIn.whereId ;
                             place.findById(placeId,function(err,place){
                                 if(err) throw err ;
-                                //else if (!place){ console.log(" Empty place even though id exist") ;  }
 
                                 else {
+                                    locationId = place._id ;
                                     locationName = place.restaurant.name ;
                                     locationLat = place.restaurant.location.lat ;
                                     locationLong = place.restaurant.location.long ;
                                     console.log("User is vibrating from :",locationName) ;
                                     }
+                                });
+                        }
+                        else { // user not checked_in 
+                                    locationId = "" ;
+                                    locationName = "" ;
+                                    locationLat = req.body.lat ;
+                                    locationLong = req.body.long ;
+
+                        }
                                 // check if we have photo attcahed or not
                                     var fileCount ;
                                     var fileDest  ;
@@ -142,10 +154,11 @@
                                     },
                                     createdOn: createDate,
                                     location : {
+                                        locationId:locationId,
                                         name : locationName,
                                         lat :  locationLat,
                                         long : locationLong
-                                           } ,
+                                           } 
 
                                 });
 
@@ -164,14 +177,105 @@
                                 curr_user.save(function(err){
                                     if(err) throw err;
                                     else console.log("user-feed maping done");
-                                })
-
-                                 
-                                console.log(" feed added to data base successfully") ;
+                                });
+                                 console.log(" feed added to data base successfully") ;
                             });
-                             });
+                        // fucntion : if user is not checked in at some place 
+                     }//else 1
+            });
+          }
+        });
+});
 
+
+
+
+
+    // ? people even if theya are not checked in 
+    app.post('/feed/delete',function(req,res,next){
+
+        var createDate = Date.now() ;
+
+
+        console.log(' Image enablled post ') ;
+        upload(req,res,function(err){
+            if (err) throw err;
+            else {
+                console.log("Image uploaded successfully")
+                console.log(req.body);
+                console.log(req.file) ;
+                var user_name = req.body.uname;
+                var user_id  ;
+                console.log(' User :',user_name, 'wants to post');
+
+                user.findOne({name:user_name},function(err,curr_user){
+                    if(err) {
+                        console.log('Error in searching srror',err);
+                        res.send(err) ;
                             }
+                    else if (!curr_user){
+                        console.log('user not found in db');
+                        
+                        res.json({success:false, message:'GTFO'});
+
+                    }
+                    else { //else 1
+                    feed.findOne({"__id":ObjectId(feedId)},function(err,currFeed){
+                    if(err) {
+                        res.json({success:false,message:"db error"});
+                        throw err;}
+
+                    else if(!currFeed){
+                        console.log("feed already deleted");
+                        res.json({success:false,message:"Deleted already"});
+                    }   
+                    else{
+                    console.log(" Adding feed to  db") ;
+                    var user_id = curr_user._id ;
+                    var fileCount ;
+                    var fileDest  ;
+                    var fileName  ;
+                    var filePath  ;
+                    if(req.file){
+                        fileCount = 1 ;
+                        fileDest = req.file.destination ;
+                        fileName = req.file.filename ;
+                        filePath =  req.file.path ;
+                    }
+                    else{
+                        fileCount = 0;
+                        fileDest = "";
+                        fileName = "";
+                        filePath = "";
+
+                    }
+                    currFeed.body = req.body.feedText
+                    
+                    currFeed.file.count = fileCount;
+                    currFeed.file.countdestination = fileDest;
+                    currFeed.file.countfileName = fileName;
+                    currFeed.file.countpath =  filePath;
+                
+                    currFeed.UpdatedOn = UpdateDate;
+                                
+                        currFeed.save(function(err){
+                            if(err) throw err ;
+                            //direct him to feed line    
+                            res.json(currFeed);
+                            
+                            // add user -feed ap
+                            curr_user.feedActivity.push({feedId:newFeed._id,date:updateDate,type:"update"});
+                            curr_user.save(function(err){
+                                if(err) throw err;
+                                else console.log("user-feed maping done");
+                            })
+
+                             
+                            console.log(" feed updated to data base successfully") ;
+                        });
+                             }
+
+                            });
                         // fucntion : if user is not checked in at some place 
                         }//else 1
             });
@@ -180,114 +284,136 @@
 }); 
 
 // delete the post
-app.post('/feed/delete',function(req,res){
-
-  // find the post
-  // delete the post
-  //  remove from the users history
-  //  remove from the place -feed map 
-  var feedId = req.body.feedId ;
-  var userId = req.body.userID ;
-
-
-
-});
-// update the post
-
 
 //like the post
 app.post('/feed/like',function(req,res){
-    // user should be logged in 
-    //  
+
     //@input : userid, feedid
-    // chnage in database 
+
     var userId = req.body.userId ;
     var feedId = req.body.feedId;
     var date = Date.now()
 
-    user.findOne({"_id":ObjectId(userId)},function(err,currUser){
+    user.findOneAndUpdate({"_id":ObjectId(userId)},{$push:{"currUser.feedActivity":{feedId:feedId,date:date,type:"like"}}},function(err,currUser){
         if(err) throw err;
-        else if(!currUser) res.json({success:false, message:'GTFO'}); 
+        else if(!currUser) res.json({success:false, message:'getTFO'}); 
         else{//user has already liked the post
-        feed.findOne({"_id":ObjectId(feedId)},function(err,currFeed){
+
+        feed.update({"_id":ObjectId(feedId)},{$inc:{"likes.count" :1},$push:{"likes.activity":{userId:userID,date:date}}},function(err){
             if(err) throw err;
-            else if(!currFeed) { console.log("feed gone");res.json({success:false,message:"feed not available"});}
-            feed.findOne({"_id":currFeed._id,"likes.activity.userID":currUser._id,"likes.activity.type":"like"},function(err,nfeed){
-                if(err) throw err ;
-                else if (nfeed) {
-                    //user ahs laready liked the post
-                    res.josn({success:false,message:"Already liked"});
-                }
-                else{
-                    // adding feed to our db
-                    currFeed = currFeed.likes.count + 1;
-                    currFeed.likes.activity.push({userID:userID,date:date});
-                    currFeed.save(function(err){
-                    if(err) throw err;
-            
-                    currUser.feedActivity.push({feedId:feedId,date:date,type:"like"});
-                    currUser.save(function(err){
-                                    if(err) throw err;
-                        });
-
-                    res.json({success:true, message:'Liked'}); 
-                    });
-                }
-
-            });
+            res.json({status:true,message:"liked"});
         });
+        
       }
     }); 
 
 });
 
 // unlike post
+app.post('/feed/unlike',function(err,place){
+    // @input : userId,feedID
+    var userId = req.body.userId ;
+    var feedId = req.body.feedId;
+    var date = Date.now()
 
-// comment on post
+    user.findOneAndUpdate({"_id":ObjectId(userId)},{$pull:{feedActivity:{feedId:feedId,type:"like"}}},function(err,currUser){
+        if(err) throw err;
+        else if(!currUser) {res.json({success:false, message:'GTFO'}); }
+        else{//user has already liked the post
+
+        feed.update({"_id":ObjectId(feedId)},{$inc:{"likes.count" :-1},$pull:{"likes.activity":{userId:userID,date:date}}},function(err){
+            if(err) throw err ;
+            res.json({status:true,message:"unliked bitch"});
+        });
+        
+      }
+    }); 
+
+});
+
+// comments on post
 // @input :- userId : userId of person who is commenting,feedId: _id of post on which the user comment:text
 app.post('/feed/comment',function(req,res){
+    var userId = req.body.userId;
+    var feedId = req.body.feedId ;
+    var comment = req.body.comment ;
+    var date = Date.now() ;
+    user.findOneAndUpdate({"_id":ObjectId(userId)},{$push:{feedActivity:{feedId:feedId,date:date,type:"comment"}}},function(err,currUser){
+        if(err) throw err;
+        else if(!currUser){
+            console.log("Invade");
+            res.json({success:false,message:'GTFO'});
+        }
+        else{
+            feed.findOneAndUpdate({"_id":ObjectId(feedID)},{$inc:{"comment.count":1},$push:{"comment.activity":{text:comment,date:date,userId:userId}}},function(err){
+                if(err) throw err ;
+                res.json({success:true,message:'comment added'});
+            });
+        }
+    });
+    
+});
+
+// delete comment
+app.post('/feed/delComment',function(req,res){
 
     
     var userId = req.body.userId;
     var feedId = req.body.feedId ;
     var comment = req.body.comment ;
     var date = Date.now() ;
-    user.findOne({"_id":ObjectId(userId)},function(err,currUser){
+    user.findOneAndUpdate({"_id":ObjectId(userId)},{$pull:{feedActivity:{feedId:feedId,type:"comment"}}},function(err,currUser){
         if(err) throw err;
         else if(!currUser){
-            console.log("Warn : Alien tried to invade us ");
+            console.log("Invade");
             res.json({success:false,message:'GTFO'});
         }
         else{
-            feed.findOne({"_id":ObjectId(feedId)},function(err,currFeed){
-                if(err) throw err;
-                else if (!currFeed){
-                    res.json({success:false,message:' Feed already has been deleted'});
-                }
-                else{
-                    currFeed.comment.push({text:comment,date:date,userId:userId});
-
-                    currFeed.save(function(err){
-                        if(err) throw err;
-                    });
-
-                    currUser.feedActivity.push({feedId:feedId,date:date,type:"comment"});
-                    currUser.save(function(err){
-                        if(err) throw err;
-                    });
-                    res.send({success:true,message:'Commented'})
-                }
+            feed.findOneAndUpdate({"_id":ObjectId(feedID)},{$inc:{"comment.count":-1},$pull:{comment:{text:comment,userId:userId}}},function(err){
+                if(err) throw err ;
+                res.json({success:true,message:'comment deleted'});
             });
-
         }
-    });
+    });     
+    
 });
 
-// delete comment
-
-
 // share
+app.post('/feed/share',function(req,res){
+// input @userId feedId
+var userId = req.body.userID ;
+var feedID = req.body.feedId ;
+var date = Date.now() ;
+
+});
 // show feed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

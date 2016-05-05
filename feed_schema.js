@@ -20,9 +20,11 @@ var feedSchema = mongoose.Schema({
 		// to track who is liking
 	},
 	location : {
+		locationID:String,
 		name: String,
 		lat: Number,
-		long: Number
+		long: Number,
+		checkedIn : Boolean
 	},
 	comments:[{text:String,date:Date,userId:String}],
 	share : {
@@ -31,7 +33,10 @@ var feedSchema = mongoose.Schema({
 		// to track who is sharing
 		// feedId will be the new feedId which will be given to other users feed
 
-	}
+	},
+	sponsored:{Boolean,"default":false}
+	// metadata : description hastag [ defined hashtag ]
+	// with people feature 
 
 });
 
