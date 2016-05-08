@@ -301,6 +301,8 @@ app.post('/feed/like',function(req,res){
 
         feed.update({"_id":ObjectId(feedId)},{$inc:{"likes.count" :1},$push:{"likes.activity":{userId:userID,date:date}}},function(err){
             if(err) throw err;
+            // update the feedscore
+            // update the user_vtegory score
             res.json({status:true,message:"liked"});
         });
         
@@ -323,6 +325,8 @@ app.post('/feed/unlike',function(err,place){
 
         feed.update({"_id":ObjectId(feedId)},{$inc:{"likes.count" :-1},$pull:{"likes.activity":{userId:userID,date:date}}},function(err){
             if(err) throw err ;
+            // update the feedscore
+            // update the user_vtegory score
             res.json({status:true,message:"unliked bitch"});
         });
         
@@ -347,6 +351,8 @@ app.post('/feed/comment',function(req,res){
         else{
             feed.findOneAndUpdate({"_id":ObjectId(feedID)},{$inc:{"comment.count":1},$push:{"comment.activity":{text:comment,date:date,userId:userId}}},function(err){
                 if(err) throw err ;
+                            // update the feedscore
+            // update the user_vtegory score
                 res.json({success:true,message:'comment added'});
             });
         }
@@ -371,6 +377,8 @@ app.post('/feed/delComment',function(req,res){
         else{
             feed.findOneAndUpdate({"_id":ObjectId(feedID)},{$inc:{"comment.count":-1},$pull:{comment:{text:comment,userId:userId}}},function(err){
                 if(err) throw err ;
+                // update the feedscore
+                // update the user_vtegory score
                 res.json({success:true,message:'comment deleted'});
             });
         }
